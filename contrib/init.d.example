@@ -9,7 +9,7 @@
 # Description:       Enable service provided by daemon.
 ### END INIT INFO
 
-cmd="/opt/oauth2_proxy/bin/oauth2_proxy -config=/opt/oauth2_proxy/etc/oauthproxy.conf"
+cmd="/opt/oauth2_proxy/bin/oauth2_proxy -config=/opt/oauth2_proxy/etc/oauth2_proxy.conf"
 
 dir=""
 
