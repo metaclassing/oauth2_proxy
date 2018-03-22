@@ -426,6 +426,9 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 	}
 
 	redirect = req.Form.Get("rd")
+	if redirect == "" && req.Header.Get("X-Auth-Request-Redirect") != "" {
+		redirect = req.Header.Get("X-Auth-Request-Redirect")
+	}
 	if redirect == "" || !strings.HasPrefix(redirect, "/") || strings.HasPrefix(redirect, "//") {
 		redirect = "/"
 	}
@@ -693,6 +696,9 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 		rw.Header().Set("X-Auth-Request-User", session.User)
 		if session.Email != "" {
 			rw.Header().Set("X-Auth-Request-Email", session.Email)
+		}
+		if p.PassAccessToken && session.AccessToken != "" {
+			rw.Header().Set("X-Auth-Request-Access-Token", session.AccessToken)
 		}
 	}
 	if p.PassAccessToken && session.AccessToken != "" {
