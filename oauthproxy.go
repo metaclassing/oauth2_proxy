@@ -745,14 +745,12 @@ func (p *OAuthProxy) CheckBasicAuth(value string) (*providers.SessionState, erro
 	return nil, fmt.Errorf("%s not in HtpasswdFile", pair[0])
 }
 
-func (p *OAuthProxy) CheckBearerAuth(value string) (*providers.SessionState, error) {
-	email, err := p.provider.GetEmailAddress(&providers.SessionState{AccessToken: value})
+func (p *OAuthProxy) CheckBearerAuth(token string) (*providers.SessionState, error) {
+
+	s, err := p.provider.ValidateBearerToken(p.redirectURL, token)
 	if err != nil {
 		return nil, errors.New("invalid bearer token")
 	}
-	return &providers.SessionState{
-		AccessToken: value,
-		Email:       email,
-		User:        email,
-	}, nil
+
+	return &providers.SessionState{}, nil
 }
