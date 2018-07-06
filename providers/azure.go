@@ -209,10 +209,11 @@ func (p *AzureProvider) ValidateBearerToken(redirectURL string, token string) (s
 	}
 
 	s = &SessionState{
-		Email:     claims.Email,
-		User:      claims.Name,
-		IdToken:   token,
-		ExpiresOn: time.Unix(claims.Exp, 0),
+		Email:       claims.Email,
+		User:        claims.Name,
+		IdToken:     idToken.AccessTokenHash,
+		ExpiresOn:   time.Unix(claims.Exp, 0),
+		AccessToken: token,
 	}
 
 	return
