@@ -15,7 +15,7 @@ type Provider interface {
 	RefreshSessionIfNeeded(*SessionState) (bool, error)
 	SessionFromCookie(string, *cookie.Cipher) (*SessionState, error)
 	CookieForSession(*SessionState, *cookie.Cipher) (string, error)
-	ValidateBearerToken(string, string) (string, error)
+	ValidateBearerToken(string, string) (*SessionState, error)
 }
 
 func New(provider string, p *ProviderData) Provider {

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/bitly/go-simplejson"
 	"github.com/bitly/oauth2_proxy/api"
@@ -139,21 +140,18 @@ func GetScopes(providerScope string, openidScope string) []string {
 	}
 }
 
-func (p *AzureProvider) ValidateBearerToken(redirectURL string, token string) (result string, err error) {
+func (p *AzureProvider) ValidateBearerToken(redirectURL string, token string) (s *SessionState, err error) {
 	ctx := context.Background()
-	provider, err := oidc.NewProvider(ctx, "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47")
+	// provider, err := oidc.NewProvider(ctx, "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47")
+	// provider, err := oidc.NewProvider(ctx, "https://sts.windows.net/9188040d-6c67-4c5b-b112-36a304b66dad/")
+	var issuer = fmt.Sprintf("https://sts.windows.net/%s/", p.Tenant)
+	provider, err := oidc.NewProvider(ctx, issuer)
 	if err != nil {
 		// handle error
-		return "", fmt.Errorf("could not verify id_token: %v", err)
+		return nil, fmt.Errorf("could not verify id_token: %v", err)
 	}
 
 	scopes := GetScopes(p.Scope, oidc.ScopeOpenID)
-
-	// []string{oidc.ScopeOpenID, "profile", "email", "groups"}
-
-	// if p.Scope != oidc.ScopeOpenID {
-	// 	scopes := []string{oidc.ScopeOpenID, "profile", "email", "groups", p.Scope}
-	// }
 
 	// Configure an OpenID Connect aware OAuth2 client.
 	oauth2Config := oauth2.Config{
@@ -172,7 +170,6 @@ func (p *AzureProvider) ValidateBearerToken(redirectURL string, token string) (r
 		RedirectURL: redirectURL,
 
 		// "openid" is a required scope for OpenID Connect flows.
-		// Scopes: []string{oidc.ScopeOpenID, "profile", "email", p.Scope},
 		Scopes: scopes,
 	}
 
@@ -184,7 +181,7 @@ func (p *AzureProvider) ValidateBearerToken(redirectURL string, token string) (r
 	// Parse and verify ID Token payload.
 	idToken, err := verifier.Verify(ctx, token)
 	if err != nil {
-		return "", fmt.Errorf("could not verify id_token: %v", err)
+		return nil, fmt.Errorf("could not verify id_token: %v", err)
 	}
 
 	// Extract custom claims.
@@ -193,26 +190,31 @@ func (p *AzureProvider) ValidateBearerToken(redirectURL string, token string) (r
 		Email_Verified *bool  `json:"email_verified"`
 		TenantID       string `json:"tid"`
 		Name           string `json:"name"`
+		Upn            string `json:"upn"`
+		Exp            int64  `json:"exp"`
 	}
 
 	if err := idToken.Claims(&claims); err != nil {
-		return "", fmt.Errorf("failed to parse id_token claims: %v", err)
+		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
 	}
 
-	//if claims.Email == "" {
-	//	return nil, fmt.Errorf("id_token did not contain an email")
-	//}
-	//if claims.Email_Verified != nil && !*claims.Email_Verified {
-	//	return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-	//}
+	if claims.Email == "" {
+		if claims.Upn == "" {
+			return nil, fmt.Errorf("id_token did not contain an email or upn")
+		}
+		claims.Email = claims.Upn
+	}
+	if claims.Email_Verified != nil && !*claims.Email_Verified {
+		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+	}
 
-	// s = &SessionState{
-	// 	AccessToken:  token.AccessToken,
-	// 	RefreshToken: token.RefreshToken,
-	// 	ExpiresOn:    token.Expiry,
-	// 	Email:        claims.Email,
-	// }
+	s = &SessionState{
+		Email:     claims.Email,
+		User:      claims.Name,
+		IdToken:   token,
+		ExpiresOn: time.Unix(claims.Exp, 0),
+	}
 
-	return "", nil
+	return
 
 }

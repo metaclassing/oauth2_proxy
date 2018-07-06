@@ -747,10 +747,10 @@ func (p *OAuthProxy) CheckBasicAuth(value string) (*providers.SessionState, erro
 
 func (p *OAuthProxy) CheckBearerAuth(token string) (*providers.SessionState, error) {
 
-	s, err := p.provider.ValidateBearerToken(p.redirectURL, token)
+	session, err := p.provider.ValidateBearerToken(p.redirectURL.String(), token)
 	if err != nil {
-		return nil, errors.New("invalid bearer token")
+		return nil, fmt.Errorf("unable to validate bearer token: %s", err)
 	}
 
-	return &providers.SessionState{}, nil
+	return session, nil
 }
