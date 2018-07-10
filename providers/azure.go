@@ -173,9 +173,6 @@ func (p *AzureProvider) ValidateBearerToken(redirectURL string, token string) (s
 		Scopes: scopes,
 	}
 
-	// set auth url param, specific to Azure
-	//oauth2Config.AuthCodeURL("state", oauth2.SetAuthURLParam("resource", p.ProtectedResource))
-
 	var verifier = provider.Verifier(&oidc.Config{ClientID: oauth2Config.ClientID})
 
 	// Parse and verify ID Token payload.
@@ -192,17 +189,29 @@ func (p *AzureProvider) ValidateBearerToken(redirectURL string, token string) (s
 		Name           string `json:"name"`
 		Upn            string `json:"upn"`
 		Exp            int64  `json:"exp"`
+		AppID          string `json:"appid"`
 	}
 
 	if err := idToken.Claims(&claims); err != nil {
-		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
+		// return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
+
 	}
 
 	if claims.Email == "" {
-		if claims.Upn == "" {
-			return nil, fmt.Errorf("id_token did not contain an email or upn")
+		// some UPNs don't have an email configured. Use UPN instead.
+
+		if claims.Upn != "" {
+			claims.Email = claims.Upn
+		} else {
+			// Token may be for an App Registration.  Use App ID as "user"
+			// See: https://blogs.msdn.microsoft.com/aaddevsup/2018/04/12/implementing-service-to-service-authorization-and-getting-the-access-token-with-postman-utilizing-client-credential-grant-type/
+			claims.Email = claims.AppID
+			claims.Name = claims.AppID
 		}
-		claims.Email = claims.Upn
+	}
+
+	if claims.Email == "" {
+		return nil, fmt.Errorf("id_token did not contain an email, upn, or appid")
 	}
 	if claims.Email_Verified != nil && !*claims.Email_Verified {
 		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
