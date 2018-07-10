@@ -193,7 +193,7 @@ func (p *AzureProvider) ValidateBearerToken(redirectURL string, token string) (s
 	}
 
 	if err := idToken.Claims(&claims); err != nil {
-		// return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
+		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
 
 	}
 
