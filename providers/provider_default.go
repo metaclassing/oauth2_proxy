@@ -125,7 +125,3 @@ func (p *ProviderData) ValidateSessionState(s *SessionState) bool {
 func (p *ProviderData) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
 	return false, nil
 }
-
-func (p *ProviderData) ValidateBearerToken(string, string) (s *SessionState, err error) {
-	return nil, errors.New("not implemented")
-}

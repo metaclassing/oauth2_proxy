@@ -67,8 +67,7 @@ func emailFromIdToken(idToken string) (string, error) {
 	// id_token is a base64 encode ID token payload
 	// https://developers.google.com/accounts/docs/OAuth2Login#obtainuserinfo
 	jwt := strings.Split(idToken, ".")
-	jwtData := strings.TrimSuffix(jwt[1], "=")
-	b, err := base64.RawURLEncoding.DecodeString(jwtData)
+	b, err := base64.RawURLEncoding.DecodeString(jwt[1])
 	if err != nil {
 		return "", err
 	}

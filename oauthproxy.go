@@ -668,7 +668,7 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 	}
 
 	if session == nil {
-		session, err = p.CheckAuthHeader(req)
+		session, err = p.CheckBasicAuth(req)
 		if err != nil {
 			log.Printf("%s %s", remoteAddr, err)
 		}
@@ -712,31 +712,19 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 	return http.StatusAccepted
 }
 
-func (p *OAuthProxy) CheckAuthHeader(req *http.Request) (*providers.SessionState, error) {
+func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*providers.SessionState, error) {
+	if p.HtpasswdFile == nil {
+		return nil, nil
+	}
 	auth := req.Header.Get("Authorization")
 	if auth == "" {
 		return nil, nil
 	}
 	s := strings.SplitN(auth, " ", 2)
-	if len(s) != 2 {
+	if len(s) != 2 || s[0] != "Basic" {
 		return nil, fmt.Errorf("invalid Authorization header %s", req.Header.Get("Authorization"))
 	}
-
-	switch s[0] {
-	case "Basic":
-		if p.HtpasswdFile == nil {
-			return nil, nil
-		}
-		return p.CheckBasicAuth(s[1])
-	case "Bearer":
-		return p.CheckBearerAuth(s[1])
-	default:
-		return nil, fmt.Errorf("invalid Authorization header, unsupport type %s", s[1])
-	}
-}
-
-func (p *OAuthProxy) CheckBasicAuth(value string) (*providers.SessionState, error) {
-	b, err := b64.StdEncoding.DecodeString(value)
+	b, err := b64.StdEncoding.DecodeString(s[1])
 	if err != nil {
 		return nil, err
 	}
@@ -749,14 +737,4 @@ func (p *OAuthProxy) CheckBasicAuth(value string) (*providers.SessionState, erro
 		return &providers.SessionState{User: pair[0]}, nil
 	}
 	return nil, fmt.Errorf("%s not in HtpasswdFile", pair[0])
-}
-
-func (p *OAuthProxy) CheckBearerAuth(token string) (*providers.SessionState, error) {
-
-	session, err := p.provider.ValidateBearerToken(p.redirectURL.String(), token)
-	if err != nil {
-		return nil, fmt.Errorf("unable to validate bearer token: %s", err)
-	}
-
-	return session, nil
 }
